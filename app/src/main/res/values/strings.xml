@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">MeshServiceExample</string>
+    <string name="send_hello_message">Send Hello Message</string>
 </resources>

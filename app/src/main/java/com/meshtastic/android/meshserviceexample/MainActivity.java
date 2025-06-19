@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -21,9 +22,12 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.geeksville.mesh.DataPacket;
 import com.geeksville.mesh.IMeshService;
 import com.geeksville.mesh.MessageStatus;
 import com.geeksville.mesh.NodeInfo;
+import com.geeksville.mesh.Portnums;
+
 
 import java.util.Objects;
 
@@ -34,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private ServiceConnection serviceConnection;
     private BroadcastReceiver meshtasticReceiver;
     private boolean isMeshServiceBound = false;
+    private Button sendButton;
 
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     @Override
@@ -49,6 +54,25 @@ public class MainActivity extends AppCompatActivity {
 
         TextView mainTextView = findViewById(R.id.mainTextView);
         ImageView statusImageView = findViewById(R.id.statusImageView);
+        Button sendButton = findViewById(R.id.sendBtn);
+
+        sendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (meshService != null) {
+                    try {
+                        byte[] bytes = "Hello from MeshServiceExample".getBytes();
+                        DataPacket dataPacket = new DataPacket(DataPacket.ID_BROADCAST, bytes, Portnums.PortNum.TEXT_MESSAGE_APP_VALUE,  DataPacket.ID_LOCAL, System.currentTimeMillis(), 0, MessageStatus.UNKNOWN, 3, 0, true);
+                        meshService.send(dataPacket);
+                        Log.d(TAG, "Message sent successfully");
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to send message", e);
+                    }
+                } else {
+                    Log.w(TAG, "MeshService is not bound, cannot send message");
+                }
+            }
+        });
 
         // Now you can call methods on meshService
         serviceConnection = new ServiceConnection() {
@@ -97,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     case "com.geeksville.mesh.MESH_CONNECTED": {
                         String extraConnected = intent.getStringExtra("com.geeksville.mesh.Connected");
-                        boolean connected = extraConnected.equals("CONNECTED");
+                        boolean connected = extraConnected.equalsIgnoreCase("connected");
                         Log.d(TAG, "Received ACTION_MESH_CONNECTED: " + extraConnected);
                         if (connected) {
                             statusImageView.setImageResource(android.R.color.holo_green_light);
@@ -106,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     case "com.geeksville.mesh.MESH_DISCONNECTED": {
                         String extraConnected = intent.getStringExtra("com.geeksville.mesh.Disconnected");
-                        boolean disconnected = extraConnected.equals("DISCONNECTED");
+                        boolean disconnected = extraConnected.equalsIgnoreCase("disconnected");
                         Log.d(TAG, "Received ACTION_MESH_DISTCONNECTED: " + extraConnected);
                         if (disconnected) {
                             statusImageView.setImageResource(android.R.color.holo_red_light);
@@ -137,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
         filter.addAction("com.geeksville.mesh.RECEIVED.POSITION_APP");
         filter.addAction("com.geeksville.mesh.MESH_CONNECTED");
         filter.addAction("com.geeksville.mesh.MESH_DISCONNECTED");
-        registerReceiver(meshtasticReceiver, filter, Context.RECEIVER_EXPORTED);
+        registerReceiver(meshtasticReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         Log.d(TAG, "Registered meshtasticPacketReceiver");
 
         while (!bindMeshService()) {
